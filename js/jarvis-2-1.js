@@ -17,10 +17,6 @@ Figure out the future temp and weather
 Format all this information into a coherent sentence.
 */
 
-$(function(){
-	// leaving this here just in case...
-});
-
 //Get the timezone difference
 //get the current hour
 var d = new Date();
@@ -34,21 +30,29 @@ var weatherArray = new Array;
 //Assume we're in Charlotte for now.
 var lat =  35.2271;
 var lon = -80.8431;
-
+console.log ("manual loc = "+lat+","+lon);
 // BUT let's see where we REALLY are! Let's have this be flexible enough to get loc from URL or from Tasker (Android)
 
 // Get the location dynamically from the URL
-$.urlParam = function(name){
+
+getURLCoords = function(){
 	try {
-		var results = new RegExp('[\?&]' + name + '=([^&#]*)').exec(window.location.href);
-		return results[1] || 0;		
-	} catch {
-		console.log("no " & name & " provided by URL");
+		var results = new RegExp('[\?&]' + "lat" + '=([^&#]*)').exec(window.location.href);
+		lat = results[1];		
+	} catch(err) {
+		console.log("no lat provided by URL");
+	}
+	try {
+		var results = new RegExp('[\?&]' + "lon" + '=([^&#]*)').exec(window.location.href);
+		lon = results[1];		
+	} catch(err) {
+		console.log("no lon provided by URL");
 	}
 }
 
-lat = urlParam(lat);
-lon = urlParam(lon);
+getURLCoords();
+console.log ("url loc = "+lat+","+lon);
+
 
 //get the latitude and logitude from the URL (should be passed from Tasker)
 try { var latlongarr = global("LOCN").split(",");
@@ -66,10 +70,12 @@ var theCurrentTemp;
 var theCurrentWeather;
 var theCurrentCity;
 var theWeatherCategory;
-var theSunset = new Date();
-var theSunrise = new Date;
+var theSunset;
+var theSunrise ;
 var futureWeather
 var myWeather;
+var maxTemp = 0;
+
 
 // Fetch the current weather and sunset info. This is just current weather info.
 // I was originally doing this (and the forecast) with with a .getJSON but I needed it to be synchronous with the page load.
@@ -82,8 +88,8 @@ $.ajax({
 		theCurrentWeather = data.weather[0].main;
 		theCurrentCity = data.name;
 		theWeatherCategory = data.weather[0].id;
-		theSunset = data.sys.sunset*1000;
-		theSunrise = data.sys.sunrise*1000;
+		theSunset = new Date(data.sys.sunset*1000);
+		theSunrise = new Date(data.sys.sunrise*1000);
 	}
 });
 
@@ -93,8 +99,9 @@ $.ajax({
 	async:false,
 	url:forecastURL,
 	success: function(data){
-		//go through all forty(!) forecasts, and identify the ones that are for today only
-		for(i = 0; i<40; i++){
+
+		//go through all of the forecasts, and identify the ones that are for today only
+		for(i = 0; i<data.list.length; i++){
 			if (data.list[i].dt_txt.substring(8,10) == d.getDate()) {
 				tempArray[i] = data.list[i].main.temp_max;
 				weatherArray[i] = data.list[i].weather[0].id;
@@ -102,7 +109,6 @@ $.ajax({
 		}
 		
 		// see what the highest temp will be, as well as the weather at that time
-		var maxTemp = 0;
 		
 		for (i = 0; i<tempArray.length; i++) {
 			if (tempArray[i] > maxTemp) {
@@ -357,7 +363,7 @@ function weatherCodeToText(code, tense) {
 			return "and clear";
 		break;
 		case (801):
-			return "and there are a few clouds";
+			return "and " + prefixThere + " a few clouds";
 		break;
 		case (802):
 			return "with some scattered clouds";
@@ -429,10 +435,10 @@ function weatherCodeToText(code, tense) {
 	}
 }
 
-// If you load this as the Jarvis HTML page, it'll update the page.
-document.write(displayGreeting());
-document.write(displaySunStuff());
-document.write(displayWeather());
+$(function(){
+	console.log("test");
+	$("#message").text(displayGreeting() + displaySunStuff() + displayWeather());
+});
 
 // If you run it as a plain script, it'll set a variable. I use this for Tasker.
 var thegreeting = displayGreeting() + displaySunStuff() + displayWeather();
